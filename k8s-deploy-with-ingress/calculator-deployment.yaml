@@ -1,0 +1,20 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: calculator-service-api
+spec:
+  selector:
+    matchLabels:
+      app: calculator
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: calculator
+    spec:
+      containers:
+      - name: calculator-service-api
+        image: harshalschaudhari/calculator-service-api-arm:v1.0
+        ports:
+        - containerPort: 8080
+      restartPolicy: Always

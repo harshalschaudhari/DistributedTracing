@@ -1,0 +1,20 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: user-service-api
+spec:
+  selector:
+    matchLabels:
+      app: user
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: user
+    spec:
+      containers:
+      - name: user-service-api
+        image: harshalschaudhari/user-service-api-arm:v1.0
+        ports:
+        - containerPort: 8080
+      restartPolicy: Always

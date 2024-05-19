@@ -1,0 +1,45 @@
+services:
+  nginx:
+    image: nginx:otel
+    ports:
+      - "8080:8080"
+      - "8081:8081"
+      - "8082:8082"
+      - "8083:8083"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf
+    hostname: nginx
+
+  # backends:
+  ghost:
+    image: ghost
+    # ports:
+    #   - "2368:2368"
+    environment:
+      NODE_ENV: development
+      url: http://localhost:8080
+
+  hello:
+    image: hashicorp/http-echo
+    command: ["-text", "Hello!"]
+    # ports:
+    #   - "5678:5678"
+    
+  jaeger:
+    image: jaegertracing/all-in-one:latest
+    ports:
+      - '16686:16686'
+
+  user-service-api:
+    ports:
+      - '5010:8080'
+      - '5011:443'
+    container_name: user-service-api
+    image: harshalschaudhari/user-service-api:v1.0
+
+  calculator-service-api:
+    ports:
+      - '5020:8080'
+      - '5021:443'
+    container_name: calculator-service-api
+    image: harshalschaudhari/calculator-service-api:v1.0
