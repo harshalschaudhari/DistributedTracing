@@ -1,3 +1,5 @@
+docker-compose up -d
+
 docker-compose up
 docker-compose down
 
@@ -26,4 +28,6 @@ http://localhost:8083/api/Calculator/add?num1=3&num2=49
 #Jaeger
 http://localhost:16686/search
 
+# Reference 
+https://docs.nginx.com/nginx/admin-guide/dynamic-modules/opentelemetry/
 
