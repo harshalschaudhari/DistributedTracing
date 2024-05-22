@@ -47,7 +47,7 @@ services:
       - '5010:8080'
       - '5011:443'
     container_name: user-service-api
-    image: harshalschaudhari/user-service-api:v1.0
+    image: harshalschaudhari/user-service-api:v3.0
 
   calculator-service-api:
     ports:
