@@ -1,10 +1,7 @@
-﻿using Jaeger;
-using Jaeger.Reporters;
-using Jaeger.Samplers;
-using Jaeger.Senders.Thrift;
-using Microsoft.OpenApi.Models;
-using OpenTracing;
-using OpenTracing.Contrib.NetCore.Configuration;
+﻿using Microsoft.OpenApi.Models;
+using OpenTelemetry;
+using OpenTelemetry.Resources;
+using OpenTelemetry.Trace;
 
 namespace UserRequestService
 {
@@ -17,61 +14,40 @@ namespace UserRequestService
 
         public IConfiguration Configuration { get; }
 
-        // This method gets called by the runtime. Use this method to add services to the container.
-        public void ConfigureServices(IServiceCollection services)
+        // This method gets called by the runtime. Use this method to add services to the container.
+        public void ConfigureServices(IServiceCollection services)
         {
+            string calculatorService = Configuration.GetValue<string>("CalculatorService");
             services.AddControllers();
             services.AddSwaggerGen(c => c.SwaggerDoc("v1", new OpenApiInfo { Title = "UserRequest", Version = "v1" }));
             services.AddHttpClient("CalculatorService",
-                    c =>
-                    {
-                        c.BaseAddress =
-                            // Value set by tye
-                            Configuration.GetServiceUri("CalculatorService")
-                            // For running project without tye
-                            ?? new Uri(Configuration["CalculatorService"]);
-                    })
-                .ConfigurePrimaryHttpMessageHandler(() =>
-                    new HttpClientHandler
-                    {
-                        // For demo only. Use appropriate certificates in production.
-                        ServerCertificateCustomValidationCallback =
-                            HttpClientHandler.DangerousAcceptAnyServerCertificateValidator
-                    });
+                c =>
+                {
+                    c.BaseAddress = new Uri(calculatorService);
+                })
+              .ConfigurePrimaryHttpMessageHandler(() =>
+                new HttpClientHandler
+                {
+                    // For demo only. Use appropriate certificates in production.
+                    ServerCertificateCustomValidationCallback =
+                    HttpClientHandler.DangerousAcceptAnyServerCertificateValidator
+                });
 
-            services.AddOpenTracing();
-            // Adds the Jaeger Tracer.
-            string jaegerService = Configuration.GetValue<string>("JaegerServiceEndpoint");
-            services.AddSingleton<ITracer>(sp =>
-            {
-                var serviceName = sp.GetRequiredService<IWebHostEnvironment>().ApplicationName;
-                var loggerFactory = sp.GetRequiredService<ILoggerFactory>();
-                var reporter = new RemoteReporter.Builder()
-                    .WithLoggerFactory(loggerFactory)
-                    .WithSender(
-                        new HttpSender(
-                            // Value set by Tye
-                            Configuration.GetConnectionString("Jaeger", "http-thrift")
-                            // For running project without Tye
-                            ?? jaegerService))
-                    .Build();
+            // Read Jaeger endpoint from appsettings.json 
+            string jaegerEndpoint = Configuration.GetValue<string>("JaegerServiceEndpoint");
+            string serviceName = Configuration.GetValue<string>("jaegerServiceName");
 
-                var tracer = new Tracer.Builder(serviceName)
-                    // The constant sampler reports every span.
-                    .WithSampler(new ConstSampler(true))
-                    // LoggingReporter prints every reported span to the logging framework.
-                    .WithReporter(reporter)
-                    .Build();
-                return tracer;
-            });
+            services.AddOpenTelemetryTracing(
+             (builder) => builder
+                 .AddAspNetCoreInstrumentation()
+                 .AddHttpClientInstrumentation()
+                 .AddJaegerExporter(j => { j.AgentHost = serviceName; j.AgentPort = 6831; })
+                 .SetResourceBuilder(ResourceBuilder.CreateDefault().AddService("UserRequest"))
+           );  
+        }
 
-            services.Configure<HttpHandlerDiagnosticOptions>(options =>
-                options.OperationNameResolver =
-                    request => $"{request.Method.Method}: {request?.RequestUri?.AbsoluteUri}");
-        }
-
-        // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
-        public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
+        // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
+        public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
         {
             if (env.IsDevelopment())
             {

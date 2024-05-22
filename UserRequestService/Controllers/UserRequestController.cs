@@ -1,6 +1,5 @@
 ﻿using Microsoft.AspNetCore.Mvc;
-using OpenTracing;
-using OpenTracing.Propagation;
+
 
 namespace UserRequestService.Controllers
 {
@@ -10,12 +9,12 @@ namespace UserRequestService.Controllers
     {
 
         private readonly IHttpClientFactory httpClientFactory;
-        private readonly ITracer tracer;
+        //private readonly ITracer tracer;
 
-        public UserRequestController(IHttpClientFactory httpClientFactory, ITracer tracer)
+        public UserRequestController(IHttpClientFactory httpClientFactory) //, ITracer tracer)
         {
             this.httpClientFactory = httpClientFactory;
-            this.tracer = tracer;
+            //this.tracer = tracer;
         }
 
         [HttpGet("add")]
@@ -23,24 +22,10 @@ namespace UserRequestService.Controllers
         {
             string requestUrl = $"api/Calculator/add?num1={num1}&num2={num2}";
             var actionName = ControllerContext.ActionDescriptor.DisplayName;
-            using var scope = tracer.BuildSpan(actionName).StartActive(true);
 
             Dictionary<string, IEnumerable<string>> requestHeader = Request.Headers.ToDictionary(a => a.Key, a => (IEnumerable<string>)a.Value);
-            
-            var requestHeaderDictionary = new Dictionary<string, string>();
-             
-            if (scope.Span != null)
-            {
-                foreach (var header in requestHeader)
-                {
-                    scope.Span.SetTag(header.Key, string.Join(",", header.Value.ToArray()));
-                    requestHeaderDictionary.Add(header.Key, string.Join(",", header.Value.ToArray()));
 
-                    Console.WriteLine("Request Header - " + header.Key, string.Join(",", header.Value.ToArray()));
-                }
-            }
-            
-            tracer.Inject(scope.Span.Context, BuiltinFormats.HttpHeaders, new TextMapInjectAdapter(requestHeaderDictionary));
+            var requestHeaderDictionary = new Dictionary<string, string>();
 
             var client = httpClientFactory.CreateClient("CalculatorService");
             foreach (var entry in requestHeaderDictionary)
